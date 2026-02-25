@@ -1,4 +1,4 @@
-export function createPattern() {
+function createPattern() {
   return new RegExp(
     [
       "(?<!\\d)67(?!\\d)",                          //67 not embedded in a larger number
@@ -108,3 +108,6 @@ export function createPattern() {
     "giu"
   );
 }
+
+// Expose as a global for non-module content scripts
+window.createPattern = createPattern;

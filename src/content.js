@@ -1,5 +1,3 @@
-import { createPattern } from './regex-utils.js';
-
 (() => {
   const OVERLAY_ID = "ssf-overlay";
   const HIGHLIGHT_CLASS = "ssf-highlight";
@@ -244,10 +242,6 @@ import { createPattern } from './regex-utils.js';
     debounce = setTimeout(scan, 1000);
   }
 
-  //Initial scan
-  ensureOverlay();
-  scan();
-
   //Watch for page changes (SPA / dynamic content)
   observer = new MutationObserver((mutations) => {
     if (disabled || isScanning) return;
@@ -272,6 +266,10 @@ import { createPattern } from './regex-utils.js';
 
     if (relevant) scheduleScan();
   });
+
+  //Initial scan
+  ensureOverlay();
+  scan();
 
   document.addEventListener("visibilitychange", () => {
     console.log("Visibility changed:", document.visibilityState);

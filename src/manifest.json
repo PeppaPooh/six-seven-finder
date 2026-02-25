@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Six Seven Finder",
-  "version": "1.1.0",
-  "description": "Finds 67 / six seven / 6.7 / 6-7 on the page, highlights them, and shows a bouncing-hands popup.",
+  "version": "1.2.0",
+  "description": "Finds 67 / six seven / 6.7 / 6-7 etc. on the page, highlights them, and shows a bouncing-hands popup.",
   "permissions": [],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["regex-utils.js","content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }
