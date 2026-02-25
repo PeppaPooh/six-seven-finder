@@ -15,6 +15,9 @@
     "OPTION"
   ]);
 
+  let disabled = false;
+  let currentIndex = -1;
+
   function isBlockedNode(node) {
     const el = node.parentElement;
     if (!el) return true;
@@ -78,6 +81,20 @@
     return total;
   }
 
+  function scrollToNextHighlight() {
+    const highlights = Array.from(
+      document.querySelectorAll(`.${HIGHLIGHT_CLASS}`)
+    );
+    if (!highlights.length) return;
+
+    currentIndex = (currentIndex + 1) % highlights.length;
+    const el = highlights[currentIndex];
+    el.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+
   function ensureOverlay() {
     let overlay = document.getElementById(OVERLAY_ID);
     if (overlay) return overlay;
@@ -93,28 +110,36 @@
         </span>
         <span id="ssf-text">six seven</span>
       </div>
-      <button id="ssf-btn">Dismiss</button>
+      <div id="ssf-meta">
+        <button id="ssf-next">Next</button>
+        <button id="ssf-btn">Dismiss</button>
+      </div>
     `;
 
     document.documentElement.appendChild(overlay);
-    overlay.querySelector("#ssf-btn").onclick = (e) => {
+
+    const nextBtn = overlay.querySelector("#ssf-next");
+    const dismissBtn = overlay.querySelector("#ssf-btn");
+
+    dismissBtn.onclick = (e) => {
       e.stopPropagation();
+      disabled = true;
+      clearHighlights();
       overlay.classList.add("ssf-hidden");
     };
-    overlay.addEventListener("click", () => {
-      if (document.querySelector(`.${HIGHLIGHT_CLASS}`)) {
-        document.querySelector(`.${HIGHLIGHT_CLASS}`).scrollIntoView({
-          behavior: "smooth",
-          block: "center"
-        });
-      }
-    });
+
+    nextBtn.onclick = (e) => {
+      e.stopPropagation();
+      scrollToNextHighlight();
+    };
 
     return overlay;
   }
 
   function scan() {
+    if (disabled) return;
     clearHighlights();
+    currentIndex = -1;
     const matches = walkAndHighlight(document.body);
     const overlay = ensureOverlay();
     overlay.classList.toggle("ssf-hidden", matches === 0);
