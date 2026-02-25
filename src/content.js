@@ -380,13 +380,16 @@
   });
 
   document.addEventListener("visibilitychange", () => {
-    
+    console.log("Visibility changed:", document.visibilityState);
+  
     if (disabled) return;
   
     if (isPageActive()) {
+      console.log("START observing");
       startObserving();
-      scan(); // refresh highlights after being away
+      scan();
     } else {
+      console.log("STOP observing");
       stopObserving();
     }
   });
