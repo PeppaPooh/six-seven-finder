@@ -127,6 +127,20 @@
   let observer = null;
   let isScanning = false;
 
+  function isPageActive() {
+    return document.visibilityState === "visible";
+  }
+
+  function startObserving() {
+    if (!observer || !document.body) return;
+    observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+  
+  function stopObserving() {
+    if (!observer) return;
+    observer.disconnect();
+  }
+
   function isBlockedNode(node) {
     const el = node.parentElement;
     if (!el) return true;
@@ -293,23 +307,23 @@
   }
 
   function safelyMutate(fn) {
-    //Prevent our own DOM changes from triggering observer-driven rescans
-    if (observer) observer.disconnect();
+    // Prevent our own DOM changes from triggering observer-driven rescans
+    const hadObserver = !!observer;
+    if (hadObserver) observer.disconnect();
+  
     try {
       fn();
     } finally {
-      if (observer && document.body) {
-        observer.observe(document.body, {
-          subtree: true,
-          childList: true,
-          characterData: true
-        });
+      // Only re-observe if we are active and not disabled
+      if (hadObserver && !disabled && isPageActive() && document.body) {
+        startObserving();
       }
     }
   }
 
   function scan() {
     if (disabled || isScanning || !document.body) return;
+    if (!isPageActive()) return;
 
     isScanning = true;
     try {
@@ -331,8 +345,9 @@
 
   function scheduleScan() {
     if (disabled || isScanning) return;
+    if (!isPageActive()) return;
     clearTimeout(debounce);
-    debounce = setTimeout(scan, 250);
+    debounce = setTimeout(scan, 1000);
   }
 
   //Initial scan
@@ -364,11 +379,19 @@
     if (relevant) scheduleScan();
   });
 
-  if (document.body) {
-    observer.observe(document.body, {
-      subtree: true,
-      childList: true,
-      characterData: true
-    });
+  document.addEventListener("visibilitychange", () => {
+    
+    if (disabled) return;
+  
+    if (isPageActive()) {
+      startObserving();
+      scan(); // refresh highlights after being away
+    } else {
+      stopObserving();
+    }
+  });
+
+  if (isPageActive()) {
+    startObserving();
   }
 })();
