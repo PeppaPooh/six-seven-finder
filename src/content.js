@@ -166,14 +166,13 @@
         <span id="ssf-text">six seven</span>
       </div>
       <div id="ssf-meta">
-        <button id="ssf-next" type="button">Next</button>
         <button id="ssf-btn" type="button">Dismiss</button>
       </div>
     `;
 
     document.documentElement.appendChild(overlay);
 
-    const nextBtn = overlay.querySelector("#ssf-next");
+    const card = overlay.querySelector("#ssf-card");
     const dismissBtn = overlay.querySelector("#ssf-btn");
 
     dismissBtn.onclick = (e) => {
@@ -184,7 +183,7 @@
       overlay.classList.add("ssf-hidden");
     };
 
-    nextBtn.onclick = (e) => {
+    card.onclick = (e) => {
       e.stopPropagation();
       scrollToNextHighlight();
     };
