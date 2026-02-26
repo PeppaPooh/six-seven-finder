@@ -221,6 +221,7 @@
         const matches = walkAndHighlight(document.body);
         const overlay = ensureOverlay();
         overlay.classList.toggle("ssf-hidden", matches === 0);
+        applyWaveTimingToOverlay(overlay, matches);
       });
     } finally {
       isScanning = false;
@@ -293,6 +294,10 @@
         const overlay = ensureOverlay();
         const any = document.querySelector(`.${HIGHLIGHT_CLASS}`) != null;
         overlay.classList.toggle("ssf-hidden", !any);
+
+        // NEW: total match count drives speed
+        const total = document.querySelectorAll(`.${HIGHLIGHT_CLASS}`).length;
+        applyWaveTimingToOverlay(overlay, total);
 
         // If content changed, active index may point to removed nodes
         // Keep it simple: reset
