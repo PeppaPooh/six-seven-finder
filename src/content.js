@@ -57,24 +57,21 @@
     const text = textNode.nodeValue;
     if (!text) return 0;
 
-    //IMPORTANT: reset before any .test() / .exec() because PATTERN is global (/g)
     PATTERN.lastIndex = 0;
-    if (!PATTERN.test(text)) return 0;
+    let match = PATTERN.exec(text);
+    if (!match) return 0;
 
     PATTERN.lastIndex = 0;
     let last = 0;
-    let match;
     let count = 0;
 
     const frag = document.createDocumentFragment();
 
     while ((match = PATTERN.exec(text)) !== null) {
-      //Append text before match
       if (match.index > last) {
         frag.append(document.createTextNode(text.slice(last, match.index)));
       }
 
-      //Append highlight
       const span = document.createElement("span");
       span.className = HIGHLIGHT_CLASS;
       span.textContent = match[0];
@@ -83,13 +80,11 @@
       last = match.index + match[0].length;
       count++;
 
-      //Safety for zero-length matches (not expected here, but defensive)
       if (PATTERN.lastIndex === match.index) {
         PATTERN.lastIndex++;
       }
     }
 
-    //Append trailing text
     if (last < text.length) {
       frag.append(document.createTextNode(text.slice(last)));
     }
@@ -215,14 +210,14 @@
   function scan() {
     if (disabled || isScanning || !document.body) return;
     if (!isPageActive()) return;
-  
+
     isScanning = true;
     try {
       safelyMutate(() => {
         // Full scan only (initial / visibility resume)
         clearHighlights(document.body);
         currentIndex = -1;
-      
+
         const matches = walkAndHighlight(document.body);
         const overlay = ensureOverlay();
         overlay.classList.toggle("ssf-hidden", matches === 0);
@@ -232,36 +227,108 @@
     }
   }
 
-  function scheduleScan() {
+  let pendingRoots = new Set();
+
+  /**
+   * Returns a reasonable element root to rescan for a mutation.
+   * Prefer a small-ish subtree: element itself, else parentElement.
+   */
+  function mutationToRoot(m) {
+    // Ignore overlay/highlight owned nodes early
+    const target = m.target;
+    const el =
+      target?.nodeType === Node.ELEMENT_NODE
+        ? target
+        : target?.parentElement;
+
+    if (!el) return null;
+    if (el.closest?.(`#${OVERLAY_ID}`)) return null;
+    if (el.closest?.(`.${HIGHLIGHT_CLASS}`)) return null;
+
+    // For childList, added nodes are more specific than target
+    if (m.type === "childList" && m.addedNodes?.length) {
+      for (const n of m.addedNodes) {
+        const nEl =
+          n.nodeType === Node.ELEMENT_NODE ? n : n.parentElement;
+        if (nEl && !nEl.closest?.(`#${OVERLAY_ID}`) && !nEl.closest?.(`.${HIGHLIGHT_CLASS}`)) {
+          return nEl;
+        }
+      }
+    }
+
+    return el;
+  }
+
+  /**
+   * Clears + re-highlights within each pending root (incremental scan).
+   * Also updates overlay visibility.
+   */
+  function flushIncremental() {
+    if (disabled || isScanning) return;
+    if (!isPageActive() || !document.body) return;
+    if (!pendingRoots.size) return;
+
+    isScanning = true;
+    try {
+      safelyMutate(() => {
+        // Snapshot and reset set so new mutations can queue while we work
+        const roots = Array.from(pendingRoots);
+        pendingRoots.clear();
+
+        // Clear + rehighlight each subtree
+        for (const root of roots) {
+          if (!root || !root.isConnected) continue;
+
+          // Avoid scanning huge areas if mutation root is html/body
+          const boundedRoot =
+            root === document.documentElement || root === document.body
+              ? document.body
+              : root;
+
+          clearHighlights(boundedRoot);
+          walkAndHighlight(boundedRoot);
+        }
+
+        // Overlay should reflect global highlight count
+        const overlay = ensureOverlay();
+        const any = document.querySelector(`.${HIGHLIGHT_CLASS}`) != null;
+        overlay.classList.toggle("ssf-hidden", !any);
+
+        // If content changed, active index may point to removed nodes
+        // Keep it simple: reset
+        currentIndex = -1;
+      });
+    } finally {
+      isScanning = false;
+    }
+  }
+
+  function scheduleIncremental(root) {
     if (disabled || isScanning) return;
     if (!isPageActive()) return;
+
+    if (root && root.isConnected) pendingRoots.add(root);
+
     clearTimeout(debounce);
-    debounce = setTimeout(scan, 1000);
+    debounce = setTimeout(flushIncremental, 250); // faster than 1000ms now that it’s smaller work
   }
+
+
 
   //Watch for page changes (SPA / dynamic content)
   observer = new MutationObserver((mutations) => {
-    if (disabled || isScanning) return;
+  if (disabled || isScanning) return;
+  if (!isPageActive()) return;
 
-    //Ignore mutations that happen only inside our overlay
-    const relevant = mutations.some((m) => {
-      const target = m.target;
-      if (!(target instanceof Node)) return false;
+  let queued = false;
 
-      const el =
-        target.nodeType === Node.ELEMENT_NODE
-          ? target
-          : target.parentElement;
+  for (const m of mutations) {
+    const root = mutationToRoot(m);
+    if (!root) continue;
 
-      if (el && el.closest && el.closest(`#${OVERLAY_ID}`)) return false;
-
-      //Also ignore highlight-only mutations if they somehow slip through
-      if (el && el.closest && el.closest(`.${HIGHLIGHT_CLASS}`)) return false;
-
-      return true;
-    });
-
-    if (relevant) scheduleScan();
+    scheduleIncremental(root);
+    queued = true;
+  }
   });
 
   //Initial scan
