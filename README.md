@@ -1,3 +1,4 @@
+# Six Seven Finder
 A Chrome extension to search for 67 meme related text in your active window. If any are found, it displays a bouncing-hands popup that gets more excited the more strings are found.
 
 **Finds**: 
