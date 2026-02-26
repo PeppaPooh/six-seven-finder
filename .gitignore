@@ -1,6 +1,6 @@
-<<<<<<< HEAD
 .DS_Store
-=======
+Notes-and-plans.md
+.obsidian
 # =========================
 # Build output
 # =========================
@@ -10,4 +10,3 @@ dist/
 # macOS
 # =========================
 .DS_Store
->>>>>>> 4e135ed (changed gitignore)

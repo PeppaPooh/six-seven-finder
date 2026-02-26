@@ -199,19 +199,15 @@
   }
 
   function safelyMutate(fn) {
-    // Prevent our own DOM changes from triggering observer-driven rescans
-    const hadObserver = !!observer;
-    if (hadObserver) observer.disconnect();
-  
-    try {
-      fn();
-    } finally {
-      // Only re-observe if we are active and not disabled
-      if (hadObserver && !disabled && isPageActive() && document.body) {
-        startObserving();
-      }
+  observer?.disconnect();
+  try {
+    fn();
+  } finally {
+    if (!disabled && isPageActive() && document.body) {
+      startObserving(); // startObserving already checks observer existence
     }
   }
+}
 
   function scan() {
     if (disabled || isScanning || !document.body) return;
