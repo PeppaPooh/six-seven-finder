@@ -43,8 +43,11 @@
     return false;
   }
 
-  function clearHighlights() {
-    const spans = document.querySelectorAll(`.${HIGHLIGHT_CLASS}`);
+  function clearHighlights(root = document) {
+    const spans = root.querySelectorAll
+      ? root.querySelectorAll(`.${HIGHLIGHT_CLASS}`)
+      : [];
+
     spans.forEach((span) => {
       span.replaceWith(document.createTextNode(span.textContent || ""));
     });
@@ -207,24 +210,22 @@
       startObserving(); // startObserving already checks observer existence
     }
   }
-}
+  }
 
   function scan() {
     if (disabled || isScanning || !document.body) return;
     if (!isPageActive()) return;
-
+  
     isScanning = true;
     try {
       safelyMutate(() => {
-        clearHighlights();
+        // Full scan only (initial / visibility resume)
+        clearHighlights(document.body);
         currentIndex = -1;
-
+      
         const matches = walkAndHighlight(document.body);
         const overlay = ensureOverlay();
         overlay.classList.toggle("ssf-hidden", matches === 0);
-
-        //Optional: auto-focus first result on initial scan could be enabled here.
-        //We leave behavior as-is so user uses Next.
       });
     } finally {
       isScanning = false;
